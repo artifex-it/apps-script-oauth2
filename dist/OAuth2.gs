@@ -232,12 +232,16 @@ Service_.prototype.setCodeVerififer = function(codeVerifier) {
  * @return {!Service_} This service, for chaining
  */
 Service_.prototype.generateCodeVerifier = function() {
-  const rawBytes = [];
-  for (var i = 0; i < 32; ++i) {
-    const r = Math.floor(Math.random() * 255);
-    rawBytes[i] = r;
+  let verifier = this.getStorage().getValue("code_verifier_");
+  if (! verifier) {
+    const rawBytes = [];
+    for (var i = 0; i < 96; ++i) {
+      const r = Math.floor(Math.random() * 255);
+      rawBytes[i] = r;
+    }
+    verifier = encodeUrlSafeBase64NoPadding_(rawBytes);
+    this.getStorage().setValue("code_verifier_", verifier);
   }
-  const verifier = encodeUrlSafeBase64NoPadding_(rawBytes);
   return this.setCodeVerififer(verifier);
 };
 
@@ -552,6 +556,9 @@ Service_.prototype.handleCallback = function(callbackRequest) {
   };
   if (callbackRequest.parameter.codeVerifier_) {
     payload['code_verifier'] = callbackRequest.parameter.codeVerifier_;
+  } else if (this.getStorage().getValue("code_verifier_")) {
+    payload['code_verifier'] = this.getStorage().getValue("code_verifier_");
+    this.getStorage().setValue("code_verifier_", "");
   }
   var token = this.fetchToken_(payload);
   this.saveToken_(token);
